@@ -4,51 +4,50 @@ import (
 	"sync"
 )
 
-type Queue struct{
-	sync.RWMutex
-	Events []interface{}
+type Queue struct {
+	sync.Mutex
+	events []interface{}
 }
 
 // конструктор
 func New() (*Queue) {
-	return &Queue{}
+	return &Queue{
+		events: make([]interface{}, 0, 10000),
+	}
+}
+
+// определение длины очереди
+func (q *Queue) Close() {
+	q.events = make([]interface{}, 0, 10000)
 }
 
 // определение длины очереди
 func (q *Queue) Len() int {
-	l := len(q.Events)
-	return l
+	q.Lock()
+	defer q.Unlock()
+	return len(q.events)
 }
 
 // вставка новых строк в очередь
-func (q *Queue) Push(e interface{}) {
+func (q *Queue) Push(e interface{}) (length int) {
 	q.Lock()
 	defer q.Unlock()
-	q.Events = append(q.Events, e)
-}
 
-// вставка новых строк в очередь
-func (q *Queue) RollBack(items []interface{}) {
-	q.Lock()
-	defer q.Unlock()
-	q.Events = append(q.Events, items...)
+	q.events = append(q.events, e)
+	length = len(q.events)
+	return
 }
 
 // выбираем и обрезаем до заданого размера
-func (q *Queue) Pop(count int) ([]interface{}) {
-	// лочим очередь на запись чтобы мы могли контролировать удаление элементов
+func (q *Queue) Pop(count int) (partition []interface{}) {
 	q.Lock()
 	defer q.Unlock()
 
-	var partition []interface{}
-
-	// если кол-во событий достигло нужного числа
-	if len(q.Events) >= count {
+	if len(q.events) >= count {
 		// забираем нужное кол-во
-		partition = q.Events[:count]
+		partition = q.events[:count]
 		// обрезаем очередь
-		q.Events = q.Events[count:]
+		q.events = q.events[count:]
 	}
-
-	return partition
+	return
 }
